@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerMiddleware } from './logger.middleware'; // <-- 导入
+import { VisionModule } from './vision/vision.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { LoggerMiddleware } from './logger.middleware'; // <-- 导入
     }),
     AuthModule,
     PrismaModule,
+    VisionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
