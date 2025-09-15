@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerMiddleware } from './logger.middleware'; // <-- 导入
 import { VisionModule } from './vision/vision.module';
+import { ExceptionsModule } from './exceptions/exceptions.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -15,14 +17,15 @@ import { VisionModule } from './vision/vision.module';
     AuthModule,
     PrismaModule,
     VisionModule,
+    ExceptionsModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule implements NestModule { // <-- 实现接口
+export class AppModule implements NestModule {
+  // <-- 实现接口
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(LoggerMiddleware)
-      .forRoutes('*'); // <-- 对所有路由应用此中间件
+    consumer.apply(LoggerMiddleware).forRoutes('*'); // <-- 对所有路由应用此中间件
   }
 }

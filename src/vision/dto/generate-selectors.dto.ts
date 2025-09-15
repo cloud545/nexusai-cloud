@@ -3,9 +3,9 @@ import { IsNotEmpty, IsString } from 'class-validator';
 export class GenerateSelectorsDto {
   @IsString()
   @IsNotEmpty()
-  imageBase64: string; // Base64 encoded image string
-  
+  htmlContent: string; // Ensure this is the expected property
+
   @IsString()
   @IsNotEmpty()
-  pageDescription: string; // e.g., "A Facebook group page"
+  pageDescription: string;
 }

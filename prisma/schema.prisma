@@ -6,21 +6,57 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  // Let's generate it directly into node_modules, but reference it via a path alias.
+  // This is the most robust way.
+  output   = "../node_modules/.prisma/client"
 }
-
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
 model User {
-  id                 String   @id @default(cuid())
-  email              String   @unique
+  id                 String            @id @default(cuid())
+  email              String            @unique
   nickname           String
   password           String
-  subscriptionStatus String   @default("NONE")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  subscriptionStatus String            @default("NONE")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  exceptionReports   ExceptionReport[]
+  role UserRole @default(USER) 
+}
+
+model ExceptionReport {
+  id      String @id @default(cuid())
+  ownerId String // 关联到提交该报告的用户
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  // --- 异常元数据 (元数据) ---
+  timestamp DateTime     @default(now()) // 异常发生时间
+  status    ReportStatus @default(PENDING) // 报告状态：待处理、已解决、已忽略
+
+  // --- 任务上下文 (任务上下文) ---
+  accountId      String // 关联的Facebook账号ID (如果适用)
+  personaId      String // 关联的Persona ID (如果适用)
+  task           Json // 当时执行的完整任务对象
+  failedAction   String // 失败的动作名称 (例如 "scrapePostsFromTarget")
+  failedSelector String? // 导致失败的选择器 (可能是后备选择器或鹰眼选择器)
+  pageUrl        String // 异常发生时的页面URL
+
+  // --- 战场快照 (现场快照) ---
+  // 使用 @db.Text 来存储可能非常大的数据
+  htmlSnapshot     String @db.Text
+  screenshotBase64 String @db.Text
+}
+
+enum ReportStatus {
+  PENDING // 待处理
+  RESOLVED // 已解决
+  IGNORED // 已忽略
 }

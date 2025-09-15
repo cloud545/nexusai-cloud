@@ -6,6 +6,6 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [AuthModule], // <-- 在这里导入 AuthModule
   controllers: [VisionController],
-  providers: [VisionService]
+  providers: [VisionService],
 })
 export class VisionModule {}
