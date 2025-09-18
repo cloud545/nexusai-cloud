@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // <-- 导入
@@ -72,5 +73,45 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
     return { access_token: accessToken };
+  }
+
+  async getNextAgentTask(userId: string) {
+    // Find the first available Persona for this user.
+    // In a real system, this would be based on an active strategy.
+    const persona = await this.prisma.persona.findFirst({
+      where: { ownerId: userId },
+    });
+
+    if (!persona) {
+      // If the user hasn't created a Persona, there's no task to assign.
+      throw new NotFoundException('No active Persona found for this user.');
+    }
+
+    // Find the first available Facebook Account for this user.
+    // This is a simplification for our test.
+    const facebookAccount = await this.prisma.facebookAccount.findFirst({
+      where: { ownerId: userId },
+    });
+
+    if (!facebookAccount) {
+      throw new NotFoundException('No Facebook Account found for this user.');
+    }
+
+    // Build and attach the context
+    const taskContext = {
+      userId: userId,
+      personaId: persona.id,
+      accountId: facebookAccount.id,
+    };
+
+    // Return the mock task data
+    return {
+      taskId: 'task-123',
+      type: 'BROWSE_GROUP',
+      payload: {
+        groupName: '上海交友',
+      },
+      context: taskContext,
+    };
   }
 }

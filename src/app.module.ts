@@ -1,13 +1,16 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'; // <-- 导入
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
-import { LoggerMiddleware } from './logger.middleware'; // <-- 导入
 import { VisionModule } from './vision/vision.module';
 import { ExceptionsModule } from './exceptions/exceptions.module';
 import { UserModule } from './user/user.module';
+import { SelectorsModule } from './selectors/selectors.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -19,13 +22,16 @@ import { UserModule } from './user/user.module';
     VisionModule,
     ExceptionsModule,
     UserModule,
+    SelectorsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
-export class AppModule implements NestModule {
-  // <-- 实现接口
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*'); // <-- 对所有路由应用此中间件
-  }
-}
+export class AppModule {}

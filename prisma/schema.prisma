@@ -1,13 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// FILE: nexusai-cloud/apps/api/prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
-  // Let's generate it directly into node_modules, but reference it via a path alias.
-  // This is the most robust way.
   output   = "../node_modules/.prisma/client"
 }
 
@@ -16,10 +10,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ENUMS
 enum UserRole {
   USER
   ADMIN
 }
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  IGNORED
+}
+
+enum AccountType {
+  NEW
+  MATURE
+}
+
+// MODELS
 model User {
   id                 String            @id @default(cuid())
   email              String            @unique
@@ -28,35 +36,86 @@ model User {
   subscriptionStatus String            @default("NONE")
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  role               UserRole          @default(USER)
+
+  // --- AI Configuration Fields ---
+  aiProvider         String            @default("ollama")
+  ollamaModel        String?
+  qwenApiKey         String?           @db.Text   // 阿里云的API Key
+  qwenModelName      String?           // 例如 "qwen-plus", "qwen-turbo"
+  
+  // --- Relationships ---
   exceptionReports   ExceptionReport[]
-  role UserRole @default(USER) 
+  facebookAccounts   FacebookAccount[]
+  personas           Persona[]
 }
 
+model FacebookAccount {
+  id                  String       @id @default(cuid())
+  nickname            String
+  encryptedCredential String       @db.Text
+  accountType         AccountType  @default(NEW)
+  startTime           String
+  endTime             String
+  
+  // Relation to the User who owns this account
+  ownerId             String
+  owner               User         @relation(fields: [ownerId], references: [id])
+  
+  // Relation to the Persona that manages this account
+  assignedPersonaId   String?      @unique
+  assignedPersona     Persona?     @relation("PersonaManagesAccounts", fields: [assignedPersonaId], references: [id])
+}
+
+model Persona {
+  id          String    @id @default(cuid())
+  name        String
+  mission     String    @db.Text
+  personality String    @db.Text
+
+  // Relation to the User who owns this persona
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id])
+
+  // Relation to the Facebook accounts this persona manages
+  assignedAccounts FacebookAccount[] @relation("PersonaManagesAccounts")
+  
+  // Relation to a KnowledgeBase (optional, assuming model will be added later)
+  // knowledgeBaseId String?
+}
+
+model SelectorKnowledge {
+  id          String   @id @default(cuid())
+  pageType    String
+  elementName String
+  selector    String   @db.Text
+  priority    Int      @default(10)
+  updatedBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([pageType, elementName])
+}
+
+// @description 存储由本地Agent上报的、无法自动恢复的异常事件。
 model ExceptionReport {
-  id      String @id @default(cuid())
-  ownerId String // 关联到提交该报告的用户
-  owner   User   @relation(fields: [ownerId], references: [id])
-
-  // --- 异常元数据 (元数据) ---
-  timestamp DateTime     @default(now()) // 异常发生时间
-  status    ReportStatus @default(PENDING) // 报告状态：待处理、已解决、已忽略
-
-  // --- 任务上下文 (任务上下文) ---
-  accountId      String // 关联的Facebook账号ID (如果适用)
-  personaId      String // 关联的Persona ID (如果适用)
-  task           Json // 当时执行的完整任务对象
-  failedAction   String // 失败的动作名称 (例如 "scrapePostsFromTarget")
-  failedSelector String? // 导致失败的选择器 (可能是后备选择器或鹰眼选择器)
-  pageUrl        String // 异常发生时的页面URL
-
-  // --- 战场快照 (现场快照) ---
-  // 使用 @db.Text 来存储可能非常大的数据
-  htmlSnapshot     String @db.Text
-  screenshotBase64 String @db.Text
-}
-
-enum ReportStatus {
-  PENDING // 待处理
-  RESOLVED // 已解决
-  IGNORED // 已忽略
+  id               String       @id @default(cuid())
+  timestamp        DateTime     @default(now())
+  status           ReportStatus @default(PENDING)
+  
+  // --- 任务上下文 ---
+  accountId        String
+  personaId        String
+  task             Json
+  failedAction     String
+  failedSelector   String?      @db.Text // <-- Corrected: One dot
+  errorMessage     String       @db.Text // <-- Corrected: One dot
+  
+  // --- 现场快照 ---
+  pageUrl          String       @db.Text // <-- Corrected: One dot
+  htmlSnapshot     String       @db.Text // <-- Corrected: One dot
+  screenshotBase64 String       @db.Text // <-- Corrected: One dot
+  
+  // --- 关系 ---
+  ownerId          String
+  owner            User         @relation(fields: [ownerId], references: [id])
 }

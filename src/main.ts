@@ -1,12 +1,13 @@
 import 'tsconfig-paths/register';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common'; // <-- Import Logger
 import { json, urlencoded } from 'express';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap'); // <-- Create a logger instance
 
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
@@ -29,9 +30,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const reflector = app.get(Reflector);
-  app.useGlobalGuards(new JwtAuthGuard(reflector));
+  //const reflector = app.get(Reflector);
+  //app.useGlobalGuards(new JwtAuthGuard(reflector));
 
   await app.listen(process.env.PORT ?? 3333);
+  logger.log(`Application is running on: ${await app.getUrl()}`); // <-- Added a startup log
+
 }
 void bootstrap();
